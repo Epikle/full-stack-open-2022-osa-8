@@ -1,5 +1,5 @@
-const { ApolloServer, gql } = require('apollo-server');
-const nanoid = require('nanoid');
+import { ApolloServer, gql } from 'apollo-server';
+import { nanoid } from 'nanoid';
 
 let authors = [
   {
@@ -85,11 +85,53 @@ let books = [
   },
 ];
 
+const addBookCount = () =>
+  authors.map((a) => {
+    const bookCount = books.filter((b) => b.author === a.name).length;
+
+    return { ...a, bookCount };
+  });
+
+const getBooks = ({ author, genre }) => {
+  let filteredBooks = books;
+
+  if (author) filteredBooks = books.filter((b) => b.author === author);
+  if (genre) filteredBooks = books.filter((b) => b.genres.includes(genre));
+  if (author && genre) {
+    filteredBooks = books.filter(
+      (b) => b.genres.includes(genre) && b.author === author
+    );
+  }
+
+  return filteredBooks;
+};
+
+const createBook = (args) => {
+  if (!authors.find((a) => a.name === args.author)) {
+    const newAuthor = { name: args.author, id: nanoid() };
+    authors = authors.concat(newAuthor);
+  }
+  const newBook = { ...args, id: nanoid() };
+  books = books.concat(newBook);
+
+  return newBook;
+};
+
+const editAuthor = (args) => {
+  const author = authors.find((author) => author.name === args.name);
+  if (!author) return null;
+
+  author.born = args.setBornTo;
+
+  return { name: author.name, born: author.born };
+};
+
 const typeDefs = gql`
   type Author {
     name: String!
     born: Int
     id: ID!
+    bookCount: Int
   }
 
   type Book {
@@ -103,8 +145,18 @@ const typeDefs = gql`
   type Query {
     bookCount: Int!
     authorCount: Int!
-    allBooks: [Book!]!
+    allBooks(author: String, genre: String): [Book]
     allAuthors: [Author!]!
+  }
+
+  type Mutation {
+    addBook(
+      title: String!
+      author: String!
+      published: Int!
+      genres: [String!]
+    ): Book
+    editAuthor(name: String!, setBornTo: Int!): Author
   }
 `;
 
@@ -112,8 +164,12 @@ const resolvers = {
   Query: {
     bookCount: () => books.length,
     authorCount: () => authors.length,
-    allBooks: () => books,
-    allAuthors: () => authors,
+    allBooks: (root, args) => getBooks(args),
+    allAuthors: () => addBookCount(),
+  },
+  Mutation: {
+    addBook: (root, args) => createBook(args),
+    editAuthor: (root, args) => editAuthor(args),
   },
 };
 
