@@ -1,175 +1,30 @@
-import { ApolloServer, gql } from 'apollo-server';
-import { nanoid } from 'nanoid';
+import mongoose from 'mongoose';
+import { ApolloServer } from 'apollo-server';
 
-let authors = [
-  {
-    name: 'Robert Martin',
-    id: 'afa51ab0-344d-11e9-a414-719c6709cf3e',
-    born: 1952,
-  },
-  {
-    name: 'Martin Fowler',
-    id: 'afa5b6f0-344d-11e9-a414-719c6709cf3e',
-    born: 1963,
-  },
-  {
-    name: 'Fyodor Dostoevsky',
-    id: 'afa5b6f1-344d-11e9-a414-719c6709cf3e',
-    born: 1821,
-  },
-  {
-    name: 'Joshua Kerievsky', // birthyear not known
-    id: 'afa5b6f2-344d-11e9-a414-719c6709cf3e',
-  },
-  {
-    name: 'Sandi Metz', // birthyear not known
-    id: 'afa5b6f3-344d-11e9-a414-719c6709cf3e',
-  },
-];
+import { typeDefs } from './typeDefs.js';
+import * as services from './services.js';
 
-/*
- * Suomi:
- * Saattaisi olla järkevämpää assosioida kirja ja sen tekijä tallettamalla kirjan yhteyteen tekijän nimen sijaan tekijän id
- * Yksinkertaisuuden vuoksi tallennamme kuitenkin kirjan yhteyteen tekijän nimen
- */
+const MONGODB_URI = 'mongodb://localhost:27017/osa8';
 
-let books = [
-  {
-    title: 'Clean Code',
-    published: 2008,
-    author: 'Robert Martin',
-    id: 'afa5b6f4-344d-11e9-a414-719c6709cf3e',
-    genres: ['refactoring'],
-  },
-  {
-    title: 'Agile software development',
-    published: 2002,
-    author: 'Robert Martin',
-    id: 'afa5b6f5-344d-11e9-a414-719c6709cf3e',
-    genres: ['agile', 'patterns', 'design'],
-  },
-  {
-    title: 'Refactoring, edition 2',
-    published: 2018,
-    author: 'Martin Fowler',
-    id: 'afa5de00-344d-11e9-a414-719c6709cf3e',
-    genres: ['refactoring'],
-  },
-  {
-    title: 'Refactoring to patterns',
-    published: 2008,
-    author: 'Joshua Kerievsky',
-    id: 'afa5de01-344d-11e9-a414-719c6709cf3e',
-    genres: ['refactoring', 'patterns'],
-  },
-  {
-    title: 'Practical Object-Oriented Design, An Agile Primer Using Ruby',
-    published: 2012,
-    author: 'Sandi Metz',
-    id: 'afa5de02-344d-11e9-a414-719c6709cf3e',
-    genres: ['refactoring', 'design'],
-  },
-  {
-    title: 'Crime and punishment',
-    published: 1866,
-    author: 'Fyodor Dostoevsky',
-    id: 'afa5de03-344d-11e9-a414-719c6709cf3e',
-    genres: ['classic', 'crime'],
-  },
-  {
-    title: 'The Demon ',
-    published: 1872,
-    author: 'Fyodor Dostoevsky',
-    id: 'afa5de04-344d-11e9-a414-719c6709cf3e',
-    genres: ['classic', 'revolution'],
-  },
-];
-
-const addBookCount = () =>
-  authors.map((a) => {
-    const bookCount = books.filter((b) => b.author === a.name).length;
-
-    return { ...a, bookCount };
+mongoose
+  .connect(MONGODB_URI)
+  .then(() => {
+    console.log('connected to db');
+  })
+  .catch((error) => {
+    console.log('error:', error.message);
   });
-
-const getBooks = ({ author, genre }) => {
-  let filteredBooks = books;
-
-  if (author) filteredBooks = books.filter((b) => b.author === author);
-  if (genre) filteredBooks = books.filter((b) => b.genres.includes(genre));
-  if (author && genre) {
-    filteredBooks = books.filter(
-      (b) => b.genres.includes(genre) && b.author === author
-    );
-  }
-
-  return filteredBooks;
-};
-
-const createBook = (args) => {
-  if (!authors.find((a) => a.name === args.author)) {
-    const newAuthor = { name: args.author, id: nanoid() };
-    authors = authors.concat(newAuthor);
-  }
-  const newBook = { ...args, id: nanoid() };
-  books = books.concat(newBook);
-
-  return newBook;
-};
-
-const editAuthor = (args) => {
-  const author = authors.find((author) => author.name === args.name);
-  if (!author) return null;
-
-  author.born = args.setBornTo;
-
-  return { name: author.name, born: author.born };
-};
-
-const typeDefs = gql`
-  type Author {
-    name: String!
-    born: Int
-    id: ID!
-    bookCount: Int
-  }
-
-  type Book {
-    title: String!
-    published: Int!
-    author: String!
-    genres: [String!]
-    id: ID!
-  }
-
-  type Query {
-    bookCount: Int!
-    authorCount: Int!
-    allBooks(author: String, genre: String): [Book]
-    allAuthors: [Author!]!
-  }
-
-  type Mutation {
-    addBook(
-      title: String!
-      author: String!
-      published: Int!
-      genres: [String!]
-    ): Book
-    editAuthor(name: String!, setBornTo: Int!): Author
-  }
-`;
 
 const resolvers = {
   Query: {
-    bookCount: () => books.length,
-    authorCount: () => authors.length,
-    allBooks: (root, args) => getBooks(args),
-    allAuthors: () => addBookCount(),
+    bookCount: async () => services.countBooks(),
+    authorCount: async () => services.countAuthors(),
+    allBooks: async (_root, args) => services.getBooks(args),
+    allAuthors: async () => services.getAuthors(),
   },
   Mutation: {
-    addBook: (root, args) => createBook(args),
-    editAuthor: (root, args) => editAuthor(args),
+    addBook: async (_root, args) => services.createBook(args),
+    editAuthor: async (_root, args) => services.editAuthor(args),
   },
 };
 
