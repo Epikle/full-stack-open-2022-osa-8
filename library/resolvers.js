@@ -12,7 +12,10 @@ export const resolvers = {
     bookCount: async (root) => services.countBooks(root.id),
   },
   Mutation: {
-    addBook: async (_root, args) => services.createBook(args),
-    editAuthor: async (_root, args) => services.editAuthor(args),
+    addBook: async (_root, args, context) => services.createBook(args, context),
+    editAuthor: async (_root, args, context) =>
+      services.editAuthor(args, context),
+    createUser: async (_root, args) => services.createUser(args),
+    login: async (_root, args) => services.loginUser(args),
   },
 };

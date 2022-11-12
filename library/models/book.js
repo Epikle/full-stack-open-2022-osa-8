@@ -6,6 +6,7 @@ const schema = new mongoose.Schema({
     required: true,
     unique: true,
     minlength: 2,
+    dropDups: true,
   },
   published: {
     type: Number,

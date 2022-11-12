@@ -1,7 +1,11 @@
-import { UserInputError } from 'apollo-server';
+import { AuthenticationError, UserInputError } from 'apollo-server';
+import jwt from 'jsonwebtoken';
 
 import Author from './models/author.js';
 import Book from './models/book.js';
+import User from './models/user.js';
+
+export const JWT_SECRET = 'TOSI_SALAINEN_2022';
 
 export const countBooks = async (id) => {
   const query = id ? { author: id } : {};
@@ -33,13 +37,16 @@ export const getBooks = async ({ author, genre }) => {
   return Book.find({}).populate('author');
 };
 
-export const createBook = async (args) => {
-  const author = await Author.findOne({ name: args.author });
-  const newAuthor = new Author({ name: args.author });
+export const createBook = async (args, context) => {
+  const { currentUser } = context;
+  if (!currentUser) throw new AuthenticationError('not authenticated');
+
+  let author = await Author.findOne({ name: args.author });
 
   if (!author) {
     try {
-      await newAuthor.save();
+      const newAuthor = new Author({ name: args.author });
+      author = await newAuthor.save();
     } catch (error) {
       throw new UserInputError(error.message, {
         invalidArgs: args,
@@ -60,7 +67,10 @@ export const createBook = async (args) => {
   return book;
 };
 
-export const editAuthor = async (args) => {
+export const editAuthor = async (args, context) => {
+  const { currentUser } = context;
+  if (!currentUser) throw new AuthenticationError('not authenticated');
+
   const author = await Author.findOneAndUpdate(
     { name: args.name },
     { born: args.setBornTo },
@@ -69,4 +79,32 @@ export const editAuthor = async (args) => {
 
   if (!author) return null;
   return author;
+};
+
+export const createUser = async (args) => {
+  const user = new User({ ...args });
+  try {
+    await user.save();
+  } catch (error) {
+    throw new UserInputError(error.message, {
+      invalidArgs: args,
+    });
+  }
+
+  return user;
+};
+
+export const loginUser = async (args) => {
+  const user = await User.findOne({ username: args.username });
+
+  if (!user || args.password !== 'salasana') {
+    throw new UserInputError('wrong credentials!');
+  }
+
+  const userForToken = {
+    username: user.username,
+    id: user._id,
+  };
+
+  return { value: jwt.sign(userForToken, JWT_SECRET) };
 };

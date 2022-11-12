@@ -1,16 +1,17 @@
 import mongoose from 'mongoose';
 
 const schema = new mongoose.Schema({
-  name: {
+  username: {
     type: String,
     required: true,
     unique: true,
-    minlength: 4,
+    minlength: 2,
     dropDups: true,
   },
-  born: {
-    type: Number,
+  favoriteGenre: {
+    type: String,
+    required: true,
   },
 });
 
-export default mongoose.model('Author', schema);
+export default mongoose.model('User', schema);
