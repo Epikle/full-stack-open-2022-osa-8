@@ -3,23 +3,28 @@ import { useMutation } from '@apollo/client';
 
 import { CREATE_BOOK, GET_AUTHORS, GET_BOOKS } from '../queries';
 
+const initialQueriesToReset = [
+  { query: GET_AUTHORS },
+  { query: GET_BOOKS, variables: { selectedGenre: null } },
+];
+
 const NewBook = ({ show }) => {
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
   const [published, setPublished] = useState('');
   const [genre, setGenre] = useState('');
   const [genres, setGenres] = useState([]);
+  const [queries, setQueries] = useState(initialQueriesToReset);
 
   const [createBook] = useMutation(CREATE_BOOK, {
-    refetchQueries: [{ query: GET_BOOKS }, { query: GET_AUTHORS }],
+    refetchQueries: queries,
     onError: (error) => {
       console.error(error);
     },
+    onCompleted: () => {
+      setQueries(initialQueriesToReset);
+    },
   });
-
-  if (!show) {
-    return null;
-  }
 
   const submit = async (event) => {
     event.preventDefault();
@@ -27,6 +32,15 @@ const NewBook = ({ show }) => {
     await createBook({
       variables: { title, author, published: +published, genres },
     });
+
+    const resetQueries = genres.map((genre) => ({
+      query: GET_BOOKS,
+      variables: {
+        selectedGenre: genre,
+      },
+    }));
+
+    setQueries((prevS) => prevS.concat(...resetQueries));
 
     setTitle('');
     setPublished('');
@@ -40,8 +54,13 @@ const NewBook = ({ show }) => {
     setGenre('');
   };
 
+  if (!show) {
+    return null;
+  }
+
   return (
     <div>
+      <h2>add book</h2>
       <form onSubmit={submit}>
         <div>
           title

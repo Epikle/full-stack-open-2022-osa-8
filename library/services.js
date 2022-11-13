@@ -15,7 +15,30 @@ export const countBooks = async (id) => {
 
 export const countAuthors = async () => Author.collection.countDocuments();
 
-export const getAuthors = async () => Author.find({});
+export const getAuthors = async () => {
+  const authorsWithBookCount = await Author.aggregate([
+    {
+      $lookup: {
+        from: 'books',
+        localField: '_id',
+        foreignField: 'author',
+        as: 'books',
+      },
+    },
+    { $addFields: { bookCount: { $size: '$books' } } },
+    {
+      $project: {
+        _id: 0,
+        id: '$_id',
+        name: 1,
+        born: 1,
+        bookCount: 1,
+      },
+    },
+  ]);
+
+  return authorsWithBookCount;
+};
 
 export const getBooks = async ({ author, genre }) => {
   if (author && genre) {

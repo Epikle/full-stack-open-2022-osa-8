@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 import { GET_AUTHORS, EDIT_BORN } from '../queries';
 
-const Authors = ({ show }) => {
+const Authors = ({ show, token }) => {
   const [name, setName] = useState('');
   const [born, setBorn] = useState('');
 
@@ -47,35 +47,36 @@ const Authors = ({ show }) => {
           ))}
         </tbody>
       </table>
-      <h2>set birthyear</h2>
-      <form onSubmit={submitHandler}>
-        <label htmlFor="name">name</label>
-        <select
-          name="name"
-          id="name"
-          onChange={(e) => {
-            console.log(e.target.value);
-            setName(e.target.value);
-          }}
-        >
-          <option value="">select name</option>
-          {result.data.allAuthors.map((a) => (
-            <option key={a.id} value={a.name}>
-              {a.name}
-            </option>
-          ))}
-        </select>
-        <br />
-        <label htmlFor="born">born</label>
-        <input
-          id="born"
-          type="number"
-          value={born}
-          onChange={(e) => setBorn(e.target.value)}
-        />
-        <br />
-        <button>update author</button>
-      </form>
+      {token && (
+        <>
+          <h2>set birthyear</h2>
+          <form onSubmit={submitHandler}>
+            <label htmlFor="name">name</label>
+            <select
+              name="name"
+              id="name"
+              onChange={(e) => setName(e.target.value)}
+            >
+              <option value="">select name</option>
+              {result.data.allAuthors.map((a) => (
+                <option key={a.id} value={a.name}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+            <br />
+            <label htmlFor="born">born</label>
+            <input
+              id="born"
+              type="number"
+              value={born}
+              onChange={(e) => setBorn(e.target.value)}
+            />
+            <br />
+            <button>update author</button>
+          </form>
+        </>
+      )}
     </div>
   );
 };

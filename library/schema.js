@@ -27,7 +27,7 @@ export const typeDefs = gql`
   }
 
   type Query {
-    bookCount(author: String): Int!
+    bookCount: Int!
     authorCount: Int!
     allBooks(author: String, genre: String): [Book]
     allAuthors: [Author!]!
@@ -44,5 +44,9 @@ export const typeDefs = gql`
     editAuthor(name: String!, setBornTo: Int!): Author
     createUser(username: String!, favoriteGenre: String!): User
     login(username: String!, password: String!): Token
+  }
+
+  type Subscription {
+    bookAdded: Book!
   }
 `;
